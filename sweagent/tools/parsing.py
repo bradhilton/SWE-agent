@@ -58,7 +58,9 @@ class AbstractParseFunction(ABC):
     error_message: str
 
     @abstractmethod
-    def __call__(self, model_response, commands: list[Command], strict=False) -> tuple[str, str]:
+    def __call__(
+        self, model_response, commands: list[Command], strict=False
+    ) -> tuple[str, str]:
         raise NotImplementedError
 
     @property
@@ -116,7 +118,8 @@ class ThoughtActionParser(AbstractParseFunction, BaseModel):
     ```
     """
 
-    error_message: str = dedent("""\
+    error_message: str = dedent(
+        """\
     Your output was not formatted correctly. You must always include one discussion and one command as part of your response. Make sure you do not have multiple discussion/command tags.
     Please make sure your output precisely matches the following format:
     DISCUSSION
@@ -125,7 +128,8 @@ class ThoughtActionParser(AbstractParseFunction, BaseModel):
     ```
     command(s) that you're going to run
     ```
-    """)
+    """
+    )
 
     type: Literal["thought_action"] = "thought_action"
     """Type for (de)serialization. Do not change."""
@@ -159,7 +163,10 @@ class ThoughtActionParser(AbstractParseFunction, BaseModel):
                 stack.append(match)
         if last_valid_block:
             start, end = last_valid_block
-            thought = model_response["message"][: start.start()] + model_response["message"][end.end() :]
+            thought = (
+                model_response["message"][: start.start()]
+                + model_response["message"][end.end() :]
+            )
             return thought, model_response["message"][start.end() : end.start()]
         msg = "No action found in model response."
         raise FormatError(msg)
@@ -175,15 +182,19 @@ class XMLThoughtActionParser(AbstractParseFunction, BaseModel):
     </command>
     """
 
-    error_message: str = dedent("""\
+    error_message: str = dedent(
+        """\
     Your output was not formatted correctly. You must always include one discussion and one command as part of your response. Make sure you do not have multiple discussion/command tags.
     Please make sure your output precisely matches the following format:
-    """)
+    """
+    )
 
     type: Literal["xml_thought_action"] = "xml_thought_action"
     """Type for (de)serialization. Do not change."""
 
-    def __call__(self, model_response: dict, commands: list[Command], strict=False) -> tuple[str, str]:
+    def __call__(
+        self, model_response: dict, commands: list[Command], strict=False
+    ) -> tuple[str, str]:
         """
         Parses the action from the output of the API call.
         We assume that the action is the last code block in the model_response.
@@ -199,21 +210,31 @@ class XMLThoughtActionParser(AbstractParseFunction, BaseModel):
 
         In this case, only the second code block will be parsed as the action.
         """
-        if "<command>" not in model_response["message"] or "</command>" not in model_response["message"]:
+        if (
+            "<command>" not in model_response["message"]
+            or "</command>" not in model_response["message"]
+        ):
             msg = "No action found in model response."
             raise FormatError(msg)
         # `action` is everything between the last <command> and </command> tags
         start_action = model_response["message"].rfind("<command>") + len(
             "<command>"
         )  # start after the last <command> tag
-        end_thought = model_response["message"].rfind("<command>")  # end before the last <command> tag
-        end_action = model_response["message"].rfind("</command>")  # end before the last </command> tag
+        end_thought = model_response["message"].rfind(
+            "<command>"
+        )  # end before the last <command> tag
+        end_action = model_response["message"].rfind(
+            "</command>"
+        )  # end before the last </command> tag
         restart_thought = model_response["message"].rfind("</command>") + len(
             "</command>"
         )  # start after the last </command> tag
         # `thought` is everything not in between <command> and </command> tags (includes after the last </command> tag)
         action = model_response["message"][start_action:end_action]
-        thought = model_response["message"][:end_thought] + model_response["message"][restart_thought:]
+        thought = (
+            model_response["message"][:end_thought]
+            + model_response["message"][restart_thought:]
+        )
 
         return thought.strip(), action.strip()
 
@@ -233,7 +254,8 @@ class XMLFunctionCallingParser(AbstractParseFunction, BaseModel):
     </function>
     """
 
-    error_message: str = dedent("""\
+    error_message: str = dedent(
+        """\
     {%- if error_code == "missing" -%}
     Your last output did not use any tool calls!
     Please make sure your output includes exactly _ONE_ function call!
@@ -249,11 +271,14 @@ class XMLFunctionCallingParser(AbstractParseFunction, BaseModel):
     {%- else -%}
     Your action could not be parsed properly: {{exception_message}}.
     {% endif %}
-    """)
+    """
+    )
 
     type: Literal["xml_function_calling"] = "xml_function_calling"
 
-    def __call__(self, model_response: dict, commands: list[Command], strict=False) -> tuple[str, str]:
+    def __call__(
+        self, model_response: dict, commands: list[Command], strict=False
+    ) -> tuple[str, str]:
         fn_match = re.search(FN_REGEX_PATTERN, model_response["message"], re.DOTALL)
         if not fn_match:
             msg = "No function found in model response."
@@ -267,7 +292,10 @@ class XMLFunctionCallingParser(AbstractParseFunction, BaseModel):
             fn_name = "submit"
 
         fn_body = fn_match.group(2)
-        thought = model_response["message"][: fn_match.start()] + model_response["message"][fn_match.end() :]
+        thought = (
+            model_response["message"][: fn_match.start()]
+            + model_response["message"][fn_match.end() :]
+        )
         thought = thought.strip()
 
         commands_dict = {c.name: c for c in commands}
@@ -276,7 +304,10 @@ class XMLFunctionCallingParser(AbstractParseFunction, BaseModel):
             msg = f"Command '{fn_name}' not found in list of available commands."
             raise FormatError(msg)
 
-        params_dict = {param[0]: param[1].strip() for param in re.findall(FN_PARAM_REGEX_PATTERN, fn_body, re.DOTALL)}
+        params_dict = {
+            param[0]: param[1].strip()
+            for param in re.findall(FN_PARAM_REGEX_PATTERN, fn_body, re.DOTALL)
+        }
         if "view_range" in params_dict:
             # Check that value is format as [x, y]
             v = params_dict["view_range"]
@@ -305,13 +336,17 @@ class XMLFunctionCallingParser(AbstractParseFunction, BaseModel):
 
         # Format arguments using their individual argument_format
         formatted_args = {
-            arg.name: Template(arg.argument_format).render(
-                value=quote(params_dict[arg.name])
-                if _should_quote(params_dict[arg.name], command)
-                else params_dict[arg.name]
+            arg.name: (
+                Template(arg.argument_format).render(
+                    value=(
+                        quote(params_dict[arg.name])
+                        if _should_quote(params_dict[arg.name], command)
+                        else params_dict[arg.name]
+                    )
+                )
+                if arg.name in params_dict
+                else ""
             )
-            if arg.name in params_dict
-            else ""
             for arg in command.arguments
         }
         return thought, command.invoke_format.format(**formatted_args).strip()
@@ -328,7 +363,8 @@ class EditFormat(ThoughtActionParser, BaseModel):
     ```
     """
 
-    error_message: str = dedent("""\
+    error_message: str = dedent(
+        """\
     Your output was not formatted correctly. You must wrap the replacement text in backticks (```).
     Please make sure your output precisely matches the following format:
     COMMENTS
@@ -341,7 +377,8 @@ class EditFormat(ThoughtActionParser, BaseModel):
     Remember that all of the window's contents will be replaced with the contents of this window.
     Don't include line numbers in your response.
     ```
-    """)
+    """
+    )
 
     type: Literal["edit_format"] = "edit_format"
     """Type for (de)serialization. Do not change."""
@@ -357,7 +394,9 @@ class Identity(AbstractParseFunction, BaseModel):
     type: Literal["identity"] = "identity"
     """Type for (de)serialization. Do not change."""
 
-    def __call__(self, model_response: dict, commands: list[Command], strict=False) -> tuple[str, str]:
+    def __call__(
+        self, model_response: dict, commands: list[Command], strict=False
+    ) -> tuple[str, str]:
         """
         This doesn't do any parsing. It just returns the model response as the thought and action.
         """
@@ -367,7 +406,8 @@ class Identity(AbstractParseFunction, BaseModel):
 class FunctionCallingParser(AbstractParseFunction, BaseModel):
     """Expects the model response to be a LiteLLM tool call."""
 
-    error_message: str = dedent("""\
+    error_message: str = dedent(
+        """\
     {%- if error_code == "missing" -%}
     Your last output did not use any tool calls!
     Please make sure your output includes exactly _ONE_ function call!
@@ -385,7 +425,8 @@ class FunctionCallingParser(AbstractParseFunction, BaseModel):
     {%- else -%}
     Your action could not be parsed properly: {{exception_message}}.
     {% endif %}
-    """)
+    """
+    )
 
     type: Literal["function_calling"] = "function_calling"
     """Type for (de)serialization. Do not change."""
@@ -398,7 +439,7 @@ class FunctionCallingParser(AbstractParseFunction, BaseModel):
             raise FunctionCallingFormatError(msg, "invalid_command")
         if not isinstance(tool_call["function"]["arguments"], dict):
             try:
-                values = json.loads(tool_call["function"]["arguments"])
+                values = json.loads(tool_call["function"]["arguments"] or "{}")
             except json.JSONDecodeError:
                 msg = "Tool call arguments are not valid JSON."
                 raise FunctionCallingFormatError(msg, "invalid_json")
@@ -416,11 +457,17 @@ class FunctionCallingParser(AbstractParseFunction, BaseModel):
             msg = f"Unexpected argument(s): {', '.join(extra_args)}"
             raise FunctionCallingFormatError(msg, "unexpected_arg")
         formatted_args = {
-            arg.name: Template(arg.argument_format).render(
-                value=quote(values[arg.name]) if _should_quote(values[arg.name], command) else values[arg.name]
+            arg.name: (
+                Template(arg.argument_format).render(
+                    value=(
+                        quote(values[arg.name])
+                        if _should_quote(values[arg.name], command)
+                        else values[arg.name]
+                    )
+                )
+                if arg.name in values
+                else ""
             )
-            if arg.name in values
-            else ""
             for arg in command.arguments
         }
         return command.invoke_format.format(**formatted_args).strip()
@@ -444,11 +491,13 @@ class FunctionCallingParser(AbstractParseFunction, BaseModel):
 class JsonParser(AbstractParseFunction, BaseModel):
     """Expects the model response to be a JSON object."""
 
-    error_message: str = dedent("""\
+    error_message: str = dedent(
+        """\
     Your output could not be parsed as JSON. Please make sure your output 1) is valid JSON and
     2) Includes the "thought" and "command" fields.
 
-    """)
+    """
+    )
 
     type: Literal["json"] = "json"
     """Type for (de)serialization. Do not change."""
@@ -504,7 +553,9 @@ class JsonParser(AbstractParseFunction, BaseModel):
                     msg = f"Command '{data_command['name']}' not found in list of available commands."
                     raise FormatError(msg)
                 # In non-strict mode, just join command name with argument values
-                return thought, " ".join([data_command["name"], *data_command.get("arguments", {}).values()])
+                return thought, " ".join(
+                    [data_command["name"], *data_command.get("arguments", {}).values()]
+                )
 
             # Format arguments using their individual argument_format
             formatted_args = {}
@@ -514,7 +565,9 @@ class JsonParser(AbstractParseFunction, BaseModel):
                         value = data_command["arguments"][arg.name]
                         if _should_quote(value, command):
                             value = quote(value)
-                        formatted_args[arg.name] = Template(arg.argument_format).render(value=value)
+                        formatted_args[arg.name] = Template(arg.argument_format).render(
+                            value=value
+                        )
                     elif strict and arg.required:
                         msg = f"Required argument '{arg.name}' missing for command '{command.name}'"
                         raise FormatError(msg)
