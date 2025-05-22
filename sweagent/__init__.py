@@ -13,7 +13,7 @@ from packaging import version
 from sweagent.utils.log import get_logger
 
 __version__ = "1.1.0"
-PYTHON_MINIMUM_VERSION = (3, 11)
+PYTHON_MINIMUM_VERSION = (3, 10)
 SWEREX_MINIMUM_VERSION = "1.2.0"
 SWEREX_RECOMMENDED_VERSION = "1.2.1"
 
@@ -30,7 +30,7 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 if sys.version_info < PYTHON_MINIMUM_VERSION:
     msg = (
         f"Python {sys.version_info.major}.{sys.version_info.minor} is not supported. "
-        "SWE-agent requires Python 3.11 or higher."
+        "SWE-agent requires Python 3.10 or higher."
     )
     raise RuntimeError(msg)
 
