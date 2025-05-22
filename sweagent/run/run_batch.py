@@ -39,7 +39,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import ExitStack
 from pathlib import Path
-from typing import Self
+from typing_extensions import Self
 
 import yaml
 from pydantic import Field, model_validator

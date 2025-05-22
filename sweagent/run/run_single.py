@@ -30,7 +30,7 @@ Here's an example that uses [bold][cyan]modal[/bold][/cyan] instead of docker an
 import getpass
 import sys
 from pathlib import Path
-from typing import Self
+from typing_extensions import Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
