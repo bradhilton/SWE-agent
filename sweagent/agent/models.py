@@ -354,10 +354,10 @@ class HumanModel(AbstractModel):
     ) -> None:
         self.stats.instance_cost += self.config.cost_per_call
         self.stats.api_calls += 1
-        if self.stats.instance_cost > self.config.per_instance_cost_limit:
+        if 0 < self.config.per_instance_cost_limit < self.stats.instance_cost:
             msg = f"Instance cost limit exceeded: {self.stats.instance_cost} > {self.config.per_instance_cost_limit}"
             raise InstanceCostLimitExceededError(msg)
-        if self.stats.instance_cost > self.config.total_cost_limit:
+        if 0 < self.config.total_cost_limit < self.stats.instance_cost:
             msg = f"Total cost limit exceeded: {self.stats.instance_cost} > {self.config.total_cost_limit}"
             raise TotalCostLimitExceededError(msg)
 
@@ -386,8 +386,6 @@ class HumanModel(AbstractModel):
             buffer = []
             while True:
                 action = input("... ")
-                if action.rstrip() == "end_multiline_command":
-                    return self._query(history, action_prompt)
                 if action.rstrip() == "end_multiline_command":
                     break
                 buffer.append(action)
@@ -582,14 +580,14 @@ class LiteLLMModel(AbstractModel):
             self.model_max_output_tokens = litellm.model_cost.get(self.config.name, {}).get("max_output_tokens")
             # Special handling for Claude 3.7 models to set 64k context by default when beta header not present
             # See https://github.com/SWE-agent/SWE-agent/pull/1016
-            is_claude_3_7 = "claude-3-7-sonnet" in self.config.name
+            is_claude_3_7 = "claude-3-7-sonnet" in self.config.name or "claude-sonnet-4" in self.config.name
             has_128k_beta_header = (
                 self.config.completion_kwargs.get("extra_headers", {}).get("anthropic-beta") == "output-128k-2025-02-19"
             )
             if is_claude_3_7 and not has_128k_beta_header:
                 self.model_max_output_tokens = 64000
                 self.logger.warning(
-                    "Claude 3.7 models do not support 128k context by default. "
+                    "Claude 3.7/4 models do not support 128k context by default. "
                     "Setting max output tokens to 64k. To enable 128k context, please set the "
                     "completion_kwargs to {'extra_headers': {'anthropic-beta': 'output-128k-2025-02-19'}}."
                 )
