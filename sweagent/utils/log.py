@@ -75,8 +75,8 @@ def get_logger(name: str, *, emoji: str = "") -> logging.Logger:
     logger.setLevel(logging.TRACE)  # type: ignore
     logger.addHandler(handler)
     logger.propagate = False
-    _SET_UP_LOGGERS.add(name)
     with _LOG_LOCK:
+        _SET_UP_LOGGERS.add(name)
         for handler in _ADDITIONAL_HANDLERS.values():
             my_filter = getattr(handler, "my_filter", None)
             if my_filter is None:
