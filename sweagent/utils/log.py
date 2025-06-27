@@ -116,7 +116,7 @@ def add_file_handler(
     handler.setLevel(_interpret_level(level))
     with _LOG_LOCK:
         # Lock because other thread might be modifying the _SET_UP_LOGGERS set
-        for name in _SET_UP_LOGGERS:
+        for name in list(_SET_UP_LOGGERS):
             if filter is not None:
                 if isinstance(filter, str) and filter not in name:
                     continue
@@ -136,7 +136,7 @@ def remove_file_handler(id_: str) -> None:
     handler = _ADDITIONAL_HANDLERS.pop(id_)
     with _LOG_LOCK:
         # Lock because other thread might be modifying the _SET_UP_LOGGERS set
-        for log_name in _SET_UP_LOGGERS:
+        for log_name in list(_SET_UP_LOGGERS):
             logger = logging.getLogger(log_name)
             logger.removeHandler(handler)
 
@@ -153,7 +153,7 @@ def add_logger_names_to_stream_handlers() -> None:
     global _INCLUDE_LOGGER_NAME_IN_STREAM_HANDLER
     _INCLUDE_LOGGER_NAME_IN_STREAM_HANDLER = True
     with _LOG_LOCK:
-        for logger in _SET_UP_LOGGERS:
+        for logger in list(_SET_UP_LOGGERS):
             _add_logger_name_to_stream_handler(logging.getLogger(logger))
 
 
@@ -166,7 +166,7 @@ def set_stream_handler_levels(level: int) -> None:
     global _STREAM_LEVEL
     _STREAM_LEVEL = level
     with _LOG_LOCK:
-        for name in _SET_UP_LOGGERS:
+        for name in list(_SET_UP_LOGGERS):
             logger = logging.getLogger(name)
             for handler in logger.handlers:
                 if isinstance(handler, _RichHandlerWithEmoji):
