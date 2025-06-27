@@ -51,7 +51,9 @@ class _RichHandlerWithEmoji(RichHandler):
 
     def get_level_text(self, record: logging.LogRecord) -> Text:
         level_name = record.levelname.replace("WARNING", "WARN")
-        return Text.styled((self.emoji + level_name).ljust(10), f"logging.level.{level_name.lower()}")
+        return Text.styled(
+            (self.emoji + level_name).ljust(10), f"logging.level.{level_name.lower()}"
+        )
 
 
 def get_logger(name: str, *, emoji: str = "") -> logging.Logger:
@@ -111,7 +113,9 @@ def add_file_handler(
     """
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     handler = logging.FileHandler(path, encoding="utf-8")
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    )
     handler.setFormatter(formatter)
     handler.setLevel(_interpret_level(level))
     with _LOG_LOCK:
